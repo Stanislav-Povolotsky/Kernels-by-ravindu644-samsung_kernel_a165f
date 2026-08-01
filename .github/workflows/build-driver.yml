@@ -1,13 +1,13 @@
 name: Build Driver Module
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'kernel-5.10/drivers/input/touchscreen/ZT7650M/**'
-      - 'build-driver.sh'
-      - '.github/workflows/build-driver.yml'
+  #push:
+  #  branches:
+  #    - main
+  #  paths:
+  #    - 'kernel-5.10/drivers/input/touchscreen/ZT7650M/**'
+  #    - 'build-driver.sh'
+  #    - '.github/workflows/build-driver.yml'
   workflow_dispatch:
     inputs:
       driver_rel_path:
