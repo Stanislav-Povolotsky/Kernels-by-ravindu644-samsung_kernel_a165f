@@ -120,15 +120,31 @@ collect_module() {
     echo "========================================================"
     echo " Collecting ${DRIVER_NAME} module(s)"
     local found=0
-    while IFS= read -r ko; do
-        cp -v "${ko}" "${SCRIPT_DIR}/dist/"
-        found=1
-    done < <(find "${KERNEL_OBJ}" -type f -name '*.ko' -path "*${DRIVER_NAME}*")
 
-    if [ "${found}" -eq 0 ]; then
-        # fall back: any .ko produced under the driver output dir
+    # Prefer the copy that modules_install placed in the staging dir: it was
+    # installed with INSTALL_MOD_STRIP=1, i.e. already stripped of the
+    # CONFIG_DEBUG_INFO debug data (the unstripped build output is several
+    # times larger). Staging only holds our external module(s).
+    if [ -d "${KERNEL_OBJ}/staging" ]; then
         while IFS= read -r ko; do
             cp -v "${ko}" "${SCRIPT_DIR}/dist/"
+            found=1
+        done < <(find "${KERNEL_OBJ}/staging" -type f -name '*.ko')
+    fi
+
+    # Fall back to the freshly built (unstripped) module and strip it ourselves.
+    if [ "${found}" -eq 0 ]; then
+        local strip_bin
+        strip_bin="$(find "${SCRIPT_DIR}/kernel/prebuilts" "${SCRIPT_DIR}/prebuilts" \
+            -type f -name 'llvm-strip' 2>/dev/null | head -n1)"
+        while IFS= read -r ko; do
+            local dst="${SCRIPT_DIR}/dist/$(basename "${ko}")"
+            cp -v "${ko}" "${dst}"
+            if [ -n "${strip_bin}" ]; then
+                "${strip_bin}" --strip-debug "${dst}"
+            else
+                echo "WARNING: llvm-strip not found; ${dst##*/} keeps debug info (large)" >&2
+            fi
             found=1
         done < <(find "${KERNEL_OBJ}" -type f -name '*.ko' -path "*${DRIVER_REL_PATH}*")
     fi
@@ -140,7 +156,7 @@ collect_module() {
 
     echo "========================================================"
     echo " Done. Modules in dist/:"
-    ls -1 "${SCRIPT_DIR}/dist/"
+    ls -lh "${SCRIPT_DIR}/dist/"
 }
 
 build_driver && collect_module
