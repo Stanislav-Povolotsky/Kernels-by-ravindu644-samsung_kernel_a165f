@@ -1,0 +1,50 @@
+name: Build Driver Module
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'kernel-5.10/drivers/input/touchscreen/ZT7650M/**'
+      - 'build-driver.sh'
+      - '.github/workflows/build-driver.yml'
+  workflow_dispatch:
+    inputs:
+      driver_rel_path:
+        description: 'Driver directory (relative to kernel-5.10)'
+        required: false
+        default: 'drivers/input/touchscreen/ZT7650M'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y bc build-essential libelf-dev libssl-dev bison flex python3 python-is-python3 rsync zip unzip curl
+
+      - name: Build driver module
+        env:
+          DRIVER_REL_PATH: ${{ github.event.inputs.driver_rel_path || 'drivers/input/touchscreen/ZT7650M' }}
+        run: |
+          chmod +x ./build-driver.sh
+          ./build-driver.sh
+
+      - name: Set Release Tag
+        run: |
+          echo "RELEASE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZT7650M-driver-SM-A165F-${{ env.RELEASE_TAG }}
+          path: dist/*.ko
+          if-no-files-found: error
