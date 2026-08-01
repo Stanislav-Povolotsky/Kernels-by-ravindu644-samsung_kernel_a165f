@@ -14,6 +14,11 @@ else
 # Invoked by kbuild (in-tree, or via `make -C <kernel> M=<this dir>`).
 ccflags-$(CONFIG_DRM_MEDIATEK_V2) += -I$(srctree)/drivers/gpu/drm/mediatek/mediatek_v2/
 
-obj-m += zt7650m.o
-zt7650m-y := sec_tsp_log.o zinitix_ts.o
+# NOTE: sec_tsp_log.o is deliberately NOT built into this module. Its symbols
+# (sec_debug_tsp_command_history, sec_debug_tsp_log, ...) are already exported
+# by the loaded sec_common_fn module; bundling them here would export duplicate
+# symbols and the kernel would reject loading (Exec format error). They are
+# resolved externally from sec_common_fn instead, matching the stock module.
+obj-m += zt7650m_ts.o
+zt7650m_ts-y := zinitix_ts.o
 endif
